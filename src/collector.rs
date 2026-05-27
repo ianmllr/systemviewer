@@ -54,13 +54,16 @@ pub fn spawn_collector(tx: mpsc::Sender<SystemSnapshot>) {
                 gpu_sample_interval,
             );
 
-            let snapshot = build_snapshot(&sys, &cached_gpu);
+            let process_count = sys.processes().len();
+            let thread_count = count_threads_windows();
+
+            let snapshot = build_snapshot(&sys, &cached_gpu, process_count, thread_count);
 
             if tx.send(snapshot).is_err() {
                 break;
             }
 
-            thread::sleep(Duration::from_secs(1));
+            thread::sleep(Duration::from_secs(2));
         }
     });
 }
@@ -147,10 +150,8 @@ fn collect_gpu_metrics(metrics: Vec<gpuinfo::metrics::GpuMetrics>) -> CachedGpuM
     }
 }
 
-fn build_snapshot(sys: &System, cached_gpu: &CachedGpuMetrics) -> SystemSnapshot {
+fn build_snapshot(sys: &System, cached_gpu: &CachedGpuMetrics, process_count: usize, thread_count: usize) -> SystemSnapshot {
     let cpu_freq_ghz = average_cpu_freq_ghz(sys);
-    let process_count = sys.processes().len();
-    let thread_count = count_threads_windows();
 
     SystemSnapshot {
         cpu_usage: sys.cpus().iter().map(|c| c.cpu_usage()).collect(),
