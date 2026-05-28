@@ -34,6 +34,25 @@ pub struct SystemSnapshot {
     pub gpus: Vec<GpuSnapshot>,
 }
 
+// default for if no collector running
+impl SystemSnapshot {
+    pub fn default_empty() -> Self {
+        SystemSnapshot {
+            cpu_usage: vec![0.0; 4],
+            cpu_freq_ghz: 0.0,
+            process_count: 0,
+            thread_count: 0,
+            memory_used: 0,
+            memory_total: 1_000_000_000,
+            gpu_total_util: 0,
+            gpu_total_mem_used: 0,
+            gpu_total_mem: 0,
+            gpu_max_temp: 0,
+            gpus: vec![],
+        }
+    }
+}
+
 pub fn spawn_collector(tx: mpsc::Sender<SystemSnapshot>) {
     thread::spawn(move || {
         let mut sys = System::new_all();
@@ -179,12 +198,12 @@ fn average_cpu_freq_ghz(sys: &System) -> f64 {
 
 
 fn count_threads_windows() -> usize {
-    unsafe {
+    unsafe { // Windows api has no safety guarantees so rust requires unsafe block
         let Ok(snapshot) = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0) else {
             return 0;
         };
 
-        let mut entry = THREADENTRY32::default();
+        let mut entry = THREADENTRY32::default(); // empty structure to hold thread info
         entry.dwSize = size_of::<THREADENTRY32>() as u32;
 
         let mut count = 0usize;

@@ -29,10 +29,7 @@
         let mut cpu_history: VecDeque<u16> = VecDeque::new(); // vecdeque is smart for adding and removing from both ends
         let mut mem_history: VecDeque<u16> = VecDeque::new();
 
-        let mut latest = match rx.recv() {
-            Ok(snapshot) => snapshot,
-            Err(_) => return,
-        };
+        let mut latest = rx.try_recv().unwrap_or_else(|_| SystemSnapshot::default_empty());
 
         push_cpu_sample(&mut cpu_history, &latest);
         push_mem_sample(&mut mem_history, &latest);
