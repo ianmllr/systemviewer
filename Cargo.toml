@@ -9,3 +9,4 @@ ratatui = "0.30.0"
 sysinfo = "0.39.2"
 gpuinfo = "0.2.0"
 windows = { version = "0.58", features = ["Win32_System_Diagnostics_ToolHelp"] }
+

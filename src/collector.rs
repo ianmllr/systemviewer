@@ -53,6 +53,7 @@ impl SystemSnapshot {
     }
 }
 
+
 pub fn spawn_collector(tx: mpsc::Sender<SystemSnapshot>) {
     thread::spawn(move || {
         let mut sys = System::new_all();
