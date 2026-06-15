@@ -8,5 +8,5 @@ crossterm = "0.29.0"
 ratatui = "0.30.0"
 sysinfo = "0.39.2"
 gpuinfo = "0.2.0"
+[target.'cfg(windows)'.dependencies]
 windows = { version = "0.58", features = ["Win32_System_Diagnostics_ToolHelp"] }
-

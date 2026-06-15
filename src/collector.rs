@@ -5,6 +5,9 @@ use std::time::{Duration, Instant};
 use gpuinfo::device::nvidia::NvidiaManager;
 use gpuinfo::device::GpuManager;
 use sysinfo::{System, ProcessesToUpdate};
+
+// Windows specifik import og funktion
+#[cfg(target_os = "windows")]
 use windows::Win32::System::Diagnostics::ToolHelp::{
     CreateToolhelp32Snapshot, Thread32First, Thread32Next,
     THREADENTRY32, TH32CS_SNAPTHREAD,
@@ -75,7 +78,7 @@ pub fn spawn_collector(tx: mpsc::Sender<SystemSnapshot>) {
             );
 
             let process_count = sys.processes().len();
-            let thread_count = count_threads_windows();
+            let thread_count = count_threads();
 
             let snapshot = build_snapshot(&sys, &cached_gpu, process_count, thread_count);
 
@@ -198,13 +201,14 @@ fn average_cpu_freq_ghz(sys: &System) -> f64 {
 }
 
 
-fn count_threads_windows() -> usize {
-    unsafe { // Windows api has no safety guarantees so rust requires unsafe block
+#[cfg(target_os = "windows")]
+fn count_threads() -> usize {
+    unsafe {
         let Ok(snapshot) = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0) else {
             return 0;
         };
 
-        let mut entry = THREADENTRY32::default(); // empty structure to hold thread info
+        let mut entry = THREADENTRY32::default();
         entry.dwSize = size_of::<THREADENTRY32>() as u32;
 
         let mut count = 0usize;
@@ -216,4 +220,29 @@ fn count_threads_windows() -> usize {
         }
         count
     }
+}
+
+#[cfg(target_os = "linux")]
+fn count_threads() -> usize {
+    let mut count = 0;
+
+    // Læser systemets processer direkte fra filstrukturen
+    if let Ok(entries) = std::fs::read_dir("/proc") {
+        for entry in entries.flatten() {
+            if let Ok(file_type) = entry.file_type() {
+                if file_type.is_dir() {
+                    let name = entry.file_name();
+                    // Tjekker om mappenavnet er et Process ID (kun tal)
+                    if name.to_string_lossy().chars().all(char::is_numeric) {
+                        let task_path = entry.path().join("task");
+                        // Hver mappe inde i /task repræsenterer en kørende tråd
+                        if let Ok(tasks) = std::fs::read_dir(task_path) {
+                            count += tasks.count();
+                        }
+                    }
+                }
+            }
+        }
+    }
+    count
 }
